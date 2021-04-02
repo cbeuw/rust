@@ -127,30 +127,17 @@ pub struct StableSourceFileId(u128);
 // StableSourceFileId, perhaps built atop source_file.name_hash.
 impl StableSourceFileId {
     pub fn new(source_file: &SourceFile) -> StableSourceFileId {
-        StableSourceFileId::new_from_pieces(
-            &source_file.name,
-            source_file.name_was_remapped,
-            source_file.unmapped_path.as_ref(),
-        )
+        StableSourceFileId::new_from_pieces(&source_file.name, source_file.name_was_remapped)
     }
 
-    fn new_from_pieces(
-        name: &FileName,
-        name_was_remapped: bool,
-        unmapped_path: Option<&FileName>,
-    ) -> StableSourceFileId {
+    fn new_from_pieces(name: &FileName, name_was_remapped: bool) -> StableSourceFileId {
         let mut hasher = StableHasher::new();
 
-        if let FileName::Real(real_name) = name {
-            // rust-lang/rust#70924: Use the stable (virtualized) name when
-            // available. (We do not want artifacts from transient file system
-            // paths for libstd to leak into our build artifacts.)
-            real_name.stable_name().hash(&mut hasher)
-        } else {
-            name.hash(&mut hasher);
-        }
+        // If name was virtualized, we need to take both the local path
+        // and stablised path into account, in case two different paths were
+        // mapped to the same
+        name.hash(&mut hasher);
         name_was_remapped.hash(&mut hasher);
-        unmapped_path.hash(&mut hasher);
 
         StableSourceFileId(hasher.finish())
     }
@@ -286,15 +273,12 @@ impl SourceMap {
         filename: FileName,
         src: String,
     ) -> Result<Lrc<SourceFile>, OffsetOverflowError> {
-        // We need to preserve the unmapped path is as it is
-        // used to determine the directory for loading submodules and include files.
         // Note that filename may not be a valid path, eg it may be `<anon>` etc,
         // but this is okay because the directory determined by `path.pop()` will
         // be empty, so the working directory will be used.
-        let (mapped_filename, was_remapped) = self.path_mapping.map_filename_prefix(&filename);
+        let (filename, was_remapped) = self.path_mapping.map_filename_prefix(&filename);
 
-        let file_id =
-            StableSourceFileId::new_from_pieces(&mapped_filename, was_remapped, Some(&filename));
+        let file_id = StableSourceFileId::new_from_pieces(&filename, was_remapped);
 
         let lrc_sf = match self.source_file_by_stable_id(file_id) {
             Some(lrc_sf) => lrc_sf,
@@ -302,9 +286,8 @@ impl SourceMap {
                 let start_pos = self.allocate_address_space(src.len())?;
 
                 let source_file = Lrc::new(SourceFile::new(
-                    mapped_filename,
-                    was_remapped,
                     filename,
+                    was_remapped,
                     src,
                     Pos::from_usize(start_pos),
                     self.hash_kind,
@@ -368,7 +351,6 @@ impl SourceMap {
         let source_file = Lrc::new(SourceFile {
             name: filename,
             name_was_remapped: name_was_remapped || name_is_remapped,
-            unmapped_path: None,
             src: None,
             src_hash,
             external_src: Lock::new(ExternalSource::Foreign {
@@ -457,14 +439,6 @@ impl SourceMap {
 
     pub fn span_to_filename(&self, sp: Span) -> FileName {
         self.lookup_char_pos(sp.lo()).file.name.clone()
-    }
-
-    pub fn span_to_unmapped_path(&self, sp: Span) -> FileName {
-        self.lookup_char_pos(sp.lo())
-            .file
-            .unmapped_path
-            .clone()
-            .expect("`SourceMap::span_to_unmapped_path` called for imported `SourceFile`?")
     }
 
     pub fn is_multiline(&self, sp: Span) -> bool {

@@ -62,7 +62,6 @@ impl<'a> HashStable<StableHashingContext<'a>> for SourceFile {
             name: _, // We hash the smaller name_hash instead of this
             name_hash,
             name_was_remapped,
-            unmapped_path: _,
             cnum,
             // Do not hash the source as it is not encoded
             src: _,

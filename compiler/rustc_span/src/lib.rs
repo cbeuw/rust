@@ -1120,10 +1120,6 @@ pub struct SourceFile {
     pub name: FileName,
     /// `true` if the `name` field above has been modified by `--remap-path-prefix`.
     pub name_was_remapped: bool,
-    /// The unmapped path of the file that the source came from.
-    /// Set to `None` if the `SourceFile` was imported from an external crate.
-    /// as it is not encoded.
-    pub unmapped_path: Option<FileName>,
     /// The complete source code.
     pub src: Option<Lrc<String>>,
     /// The source code's hash.
@@ -1274,7 +1270,6 @@ impl<D: Decoder> Decodable<D> for SourceFile {
             Ok(SourceFile {
                 name,
                 name_was_remapped,
-                unmapped_path: None,
                 start_pos,
                 end_pos,
                 src: None,
@@ -1303,7 +1298,6 @@ impl SourceFile {
     pub fn new(
         name: FileName,
         name_was_remapped: bool,
-        unmapped_path: FileName,
         mut src: String,
         start_pos: BytePos,
         hash_kind: SourceFileHashAlgorithm,
@@ -1326,7 +1320,6 @@ impl SourceFile {
         SourceFile {
             name,
             name_was_remapped,
-            unmapped_path: Some(unmapped_path),
             src: Some(Lrc::new(src)),
             src_hash,
             external_src: Lock::new(ExternalSource::Unneeded),

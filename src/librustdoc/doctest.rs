@@ -792,8 +792,6 @@ impl Tester for Collector {
         let target = self.options.target.clone();
         let target_str = target.to_string();
 
-        // FIXME(#44940): if doctests ever support path remapping, then this filename
-        // needs to be the result of `SourceMap::span_to_unmapped_path`.
         let path = match &filename {
             FileName::Real(path) => path.local_path().to_path_buf(),
             _ => PathBuf::from(r"doctest.rs"),
