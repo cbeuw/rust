@@ -1671,7 +1671,7 @@ impl<'a, 'tcx> CrateMetadataRef<'a> {
                                     virtual_name.display(),
                                     new_path.display(),
                                 );
-                                let new_name = rustc_span::RealFileName::Devirtualized {
+                                let new_name = rustc_span::RealFileName::Virtualized {
                                     local_path: new_path,
                                     virtual_name,
                                 };

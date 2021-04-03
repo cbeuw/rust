@@ -15,11 +15,11 @@ pub use crate::*;
 use rustc_data_structures::fx::FxHashMap;
 use rustc_data_structures::stable_hasher::StableHasher;
 use rustc_data_structures::sync::{AtomicU32, Lrc, MappedReadGuard, ReadGuard, RwLock};
-use std::cmp;
 use std::convert::TryFrom;
 use std::hash::Hash;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::Ordering;
+use std::{clone::Clone, cmp};
 
 use std::fs;
 use std::io;
@@ -283,35 +283,18 @@ impl SourceMap {
 
     fn try_new_source_file(
         &self,
-        mut filename: FileName,
+        filename: FileName,
         src: String,
     ) -> Result<Lrc<SourceFile>, OffsetOverflowError> {
-        // The path is used to determine the directory for loading submodules and
-        // include files, so it must be before remapping.
+        // We need to preserve the unmapped path is as it is
+        // used to determine the directory for loading submodules and include files.
         // Note that filename may not be a valid path, eg it may be `<anon>` etc,
         // but this is okay because the directory determined by `path.pop()` will
         // be empty, so the working directory will be used.
-        let unmapped_path = filename.clone();
-
-        let was_remapped;
-        if let FileName::Real(real_filename) = &mut filename {
-            match real_filename {
-                RealFileName::Named(path_to_be_remapped)
-                | RealFileName::Devirtualized {
-                    local_path: path_to_be_remapped,
-                    virtual_name: _,
-                } => {
-                    let mapped = self.path_mapping.map_prefix(path_to_be_remapped.clone());
-                    was_remapped = mapped.1;
-                    *path_to_be_remapped = mapped.0;
-                }
-            }
-        } else {
-            was_remapped = false;
-        }
+        let (mapped_filename, was_remapped) = self.path_mapping.map_filename_prefix(&filename);
 
         let file_id =
-            StableSourceFileId::new_from_pieces(&filename, was_remapped, Some(&unmapped_path));
+            StableSourceFileId::new_from_pieces(&mapped_filename, was_remapped, Some(&filename));
 
         let lrc_sf = match self.source_file_by_stable_id(file_id) {
             Some(lrc_sf) => lrc_sf,
@@ -319,9 +302,9 @@ impl SourceMap {
                 let start_pos = self.allocate_address_space(src.len())?;
 
                 let source_file = Lrc::new(SourceFile::new(
-                    filename,
+                    mapped_filename,
                     was_remapped,
-                    unmapped_path,
+                    filename,
                     src,
                     Pos::from_usize(start_pos),
                     self.hash_kind,
@@ -380,9 +363,11 @@ impl SourceMap {
             nc.pos = nc.pos + start_pos;
         }
 
+        let (filename, name_is_remapped) = self.path_mapping.map_filename_prefix(&filename);
+
         let source_file = Lrc::new(SourceFile {
             name: filename,
-            name_was_remapped,
+            name_was_remapped: name_was_remapped || name_is_remapped,
             unmapped_path: None,
             src: None,
             src_hash,
@@ -1046,9 +1031,26 @@ impl FilePathMapping {
     fn map_filename_prefix(&self, file: &FileName) -> (FileName, bool) {
         match file {
             FileName::Real(realfile) => {
-                let path = realfile.local_path();
-                let (path, mapped) = self.map_prefix(path.to_path_buf());
-                (FileName::Real(RealFileName::Named(path)), mapped)
+                // If the file is the Name variant with only local_path, then clearly we want to map that
+                // to a virtual_name
+                // If the file is already Virtualized, then we want to map virtual_name further
+                // but we leave local_path alone
+                let path = realfile.stable_name();
+                let (mapped_path, mapped) = self.map_prefix(path.to_path_buf());
+                if mapped {
+                    let mapped_realfile = match realfile {
+                        RealFileName::Named(local_path)
+                        | RealFileName::Virtualized { local_path, virtual_name: _ } => {
+                            RealFileName::Virtualized {
+                                local_path: local_path.clone(),
+                                virtual_name: mapped_path,
+                            }
+                        }
+                    };
+                    (FileName::Real(mapped_realfile), mapped)
+                } else {
+                    (file.clone(), false)
+                }
             }
             other => (other.clone(), false),
         }

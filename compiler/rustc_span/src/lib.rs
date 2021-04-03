@@ -114,17 +114,16 @@ pub fn with_default_session_globals<R>(f: impl FnOnce() -> R) -> R {
 // deserialization.
 scoped_tls::scoped_thread_local!(pub static SESSION_GLOBALS: SessionGlobals);
 
-// FIXME: Perhaps this should not implement Rustc{Decodable, Encodable}
-//
 // FIXME: We should use this enum or something like it to get rid of the
 // use of magic `/rust/1.x/...` paths across the board.
 #[derive(Debug, Eq, PartialEq, Clone, Ord, PartialOrd, Hash)]
 #[derive(HashStable_Generic, Decodable, Encodable)]
 pub enum RealFileName {
     Named(PathBuf),
-    /// For de-virtualized paths (namely paths into libstd that have been mapped
-    /// to the appropriate spot on the local host's file system),
-    Devirtualized {
+    /// For virtualized paths (namely paths into libstd that have been mapped
+    /// to the appropriate spot on the local host's file system, and local file
+    /// system paths that have been remapped with `FilePathMapping`),
+    Virtualized {
         /// `local_path` is the (host-dependent) local path to the file.
         local_path: PathBuf,
         /// `virtual_name` is the stable path rustc will store internally within
@@ -139,7 +138,7 @@ impl RealFileName {
     pub fn local_path(&self) -> &Path {
         match self {
             RealFileName::Named(p)
-            | RealFileName::Devirtualized { local_path: p, virtual_name: _ } => &p,
+            | RealFileName::Virtualized { local_path: p, virtual_name: _ } => &p,
         }
     }
 
@@ -148,7 +147,7 @@ impl RealFileName {
     pub fn into_local_path(self) -> PathBuf {
         match self {
             RealFileName::Named(p)
-            | RealFileName::Devirtualized { local_path: p, virtual_name: _ } => p,
+            | RealFileName::Virtualized { local_path: p, virtual_name: _ } => p,
         }
     }
 
@@ -159,7 +158,7 @@ impl RealFileName {
     pub fn stable_name(&self) -> &Path {
         match self {
             RealFileName::Named(p)
-            | RealFileName::Devirtualized { local_path: _, virtual_name: p } => &p,
+            | RealFileName::Virtualized { local_path: _, virtual_name: p } => &p,
         }
     }
 }
@@ -192,13 +191,7 @@ impl std::fmt::Display for FileName {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use FileName::*;
         match *self {
-            Real(RealFileName::Named(ref path)) => write!(fmt, "{}", path.display()),
-            // FIXME: might be nice to display both components of Devirtualized.
-            // But for now (to backport fix for issue #70924), best to not
-            // perturb diagnostics so its obvious test suite still works.
-            Real(RealFileName::Devirtualized { ref local_path, virtual_name: _ }) => {
-                write!(fmt, "{}", local_path.display())
-            }
+            Real(ref name) => write!(fmt, "{}", name.stable_name().display()),
             QuoteExpansion(_) => write!(fmt, "<quote expansion>"),
             MacroExpansion(_) => write!(fmt, "<macro expansion>"),
             Anon(_) => write!(fmt, "<anon>"),
@@ -1129,6 +1122,7 @@ pub struct SourceFile {
     pub name_was_remapped: bool,
     /// The unmapped path of the file that the source came from.
     /// Set to `None` if the `SourceFile` was imported from an external crate.
+    /// as it is not encoded.
     pub unmapped_path: Option<FileName>,
     /// The complete source code.
     pub src: Option<Lrc<String>>,
