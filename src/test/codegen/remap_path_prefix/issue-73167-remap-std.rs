@@ -1,16 +1,17 @@
 // ignore-windows
-// ignore-tidy-linelength
 
-// compile-flags: -g  -C no-prepopulate-passes --remap-path-prefix=/home/USERNAME=REDACTED
-// aux-build:pseudo_std.rs
+// compile-flags: -g  -C no-prepopulate-passes --remap-path-prefix={{cwd}}/library/std=/the/std
 
-extern crate pseudo_std;
-// Here we check that imported code from std has their path remapped.
-// If we were to use an actual std function to test, we'd have to remap {{cwd}}/library/...,
-// but that will break if rustc was built with remap-debuginfo = true in config.toml.
-// Hence we simulate the path rust-src would take in a real linux installation
-// by remapping the prefix inside pseudo_std.rs
-// CHECK: !DIFile(filename: "REDACTED/TOOLCHAIN/lib/rustlib/src/rust/library/std/src/pseudo_std.rs", directory: ""
+// Here we check that imported code from std has their path remapped
+// Ideally we want to do
+// COM: CHECK-NOT: !DIFile(filename: "{{cwd}}/library/std/src/thread/mod.rs"
+// But {{cwd}} will not be expanded here, so we have to check on the bit afterwards
+// Note that we can't use a positive check on `/the/std` either, because the rempap flag will
+// have no effect when `remap-debuginfo` is set to true in `config.toml`, causing the test to fail
+
+// CHECK-NOT: !DIFile(filename: "{{.*}}/library/std"
 fn main() {
-    pseudo_std::some_std_function();
+    std::thread::spawn(|| {
+        println!("hello");
+    });
 }
