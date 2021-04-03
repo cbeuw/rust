@@ -1118,8 +1118,6 @@ pub struct SourceFile {
     /// originate from files has names between angle brackets by convention
     /// (e.g., `<anon>`).
     pub name: FileName,
-    /// `true` if the `name` field above has been modified by `--remap-path-prefix`.
-    pub name_was_remapped: bool,
     /// The complete source code.
     pub src: Option<Lrc<String>>,
     /// The source code's hash.
@@ -1149,7 +1147,6 @@ impl<S: Encoder> Encodable<S> for SourceFile {
     fn encode(&self, s: &mut S) -> Result<(), S::Error> {
         s.emit_struct("SourceFile", 8, |s| {
             s.emit_struct_field("name", 0, |s| self.name.encode(s))?;
-            s.emit_struct_field("name_was_remapped", 1, |s| self.name_was_remapped.encode(s))?;
             s.emit_struct_field("src_hash", 2, |s| self.src_hash.encode(s))?;
             s.emit_struct_field("start_pos", 3, |s| self.start_pos.encode(s))?;
             s.emit_struct_field("end_pos", 4, |s| self.end_pos.encode(s))?;
@@ -1224,8 +1221,6 @@ impl<D: Decoder> Decodable<D> for SourceFile {
     fn decode(d: &mut D) -> Result<SourceFile, D::Error> {
         d.read_struct("SourceFile", 8, |d| {
             let name: FileName = d.read_struct_field("name", 0, |d| Decodable::decode(d))?;
-            let name_was_remapped: bool =
-                d.read_struct_field("name_was_remapped", 1, |d| Decodable::decode(d))?;
             let src_hash: SourceFileHash =
                 d.read_struct_field("src_hash", 2, |d| Decodable::decode(d))?;
             let start_pos: BytePos =
@@ -1269,7 +1264,6 @@ impl<D: Decoder> Decodable<D> for SourceFile {
             let cnum: CrateNum = d.read_struct_field("cnum", 10, |d| Decodable::decode(d))?;
             Ok(SourceFile {
                 name,
-                name_was_remapped,
                 start_pos,
                 end_pos,
                 src: None,
@@ -1297,7 +1291,6 @@ impl fmt::Debug for SourceFile {
 impl SourceFile {
     pub fn new(
         name: FileName,
-        name_was_remapped: bool,
         mut src: String,
         start_pos: BytePos,
         hash_kind: SourceFileHashAlgorithm,
@@ -1319,7 +1312,6 @@ impl SourceFile {
 
         SourceFile {
             name,
-            name_was_remapped,
             src: Some(Lrc::new(src)),
             src_hash,
             external_src: Lock::new(ExternalSource::Unneeded),

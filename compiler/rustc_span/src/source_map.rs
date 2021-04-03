@@ -127,17 +127,16 @@ pub struct StableSourceFileId(u128);
 // StableSourceFileId, perhaps built atop source_file.name_hash.
 impl StableSourceFileId {
     pub fn new(source_file: &SourceFile) -> StableSourceFileId {
-        StableSourceFileId::new_from_pieces(&source_file.name, source_file.name_was_remapped)
+        StableSourceFileId::new_from_name(&source_file.name)
     }
 
-    fn new_from_pieces(name: &FileName, name_was_remapped: bool) -> StableSourceFileId {
+    fn new_from_name(name: &FileName) -> StableSourceFileId {
         let mut hasher = StableHasher::new();
 
         // If name was virtualized, we need to take both the local path
         // and stablised path into account, in case two different paths were
         // mapped to the same
         name.hash(&mut hasher);
-        name_was_remapped.hash(&mut hasher);
 
         StableSourceFileId(hasher.finish())
     }
@@ -276,9 +275,9 @@ impl SourceMap {
         // Note that filename may not be a valid path, eg it may be `<anon>` etc,
         // but this is okay because the directory determined by `path.pop()` will
         // be empty, so the working directory will be used.
-        let (filename, was_remapped) = self.path_mapping.map_filename_prefix(&filename);
+        let (filename, _) = self.path_mapping.map_filename_prefix(&filename);
 
-        let file_id = StableSourceFileId::new_from_pieces(&filename, was_remapped);
+        let file_id = StableSourceFileId::new_from_name(&filename);
 
         let lrc_sf = match self.source_file_by_stable_id(file_id) {
             Some(lrc_sf) => lrc_sf,
@@ -287,7 +286,6 @@ impl SourceMap {
 
                 let source_file = Lrc::new(SourceFile::new(
                     filename,
-                    was_remapped,
                     src,
                     Pos::from_usize(start_pos),
                     self.hash_kind,
@@ -311,7 +309,6 @@ impl SourceMap {
     pub fn new_imported_source_file(
         &self,
         filename: FileName,
-        name_was_remapped: bool,
         src_hash: SourceFileHash,
         name_hash: u128,
         source_len: usize,
@@ -346,11 +343,10 @@ impl SourceMap {
             nc.pos = nc.pos + start_pos;
         }
 
-        let (filename, name_is_remapped) = self.path_mapping.map_filename_prefix(&filename);
+        let (filename, _) = self.path_mapping.map_filename_prefix(&filename);
 
         let source_file = Lrc::new(SourceFile {
             name: filename,
-            name_was_remapped: name_was_remapped || name_is_remapped,
             src: None,
             src_hash,
             external_src: Lock::new(ExternalSource::Foreign {
