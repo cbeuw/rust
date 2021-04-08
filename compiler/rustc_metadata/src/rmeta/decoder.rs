@@ -1633,7 +1633,7 @@ impl<'a, 'tcx> CrateMetadataRef<'a> {
             if let Some(virtual_dir) = virtual_rust_source_base_dir {
                 if let Some(real_dir) = &sess.real_rust_source_base_dir {
                     if let rustc_span::FileName::Real(old_name) = name {
-                        if let rustc_span::RealFileName::Named(one_path) = old_name {
+                        if let rustc_span::RealFileName::LocalPath(one_path) = old_name {
                             if let Ok(rest) = one_path.strip_prefix(virtual_dir) {
                                 let virtual_name = one_path.clone();
 
@@ -1671,7 +1671,7 @@ impl<'a, 'tcx> CrateMetadataRef<'a> {
                                     virtual_name.display(),
                                     new_path.display(),
                                 );
-                                let new_name = rustc_span::RealFileName::Virtualized {
+                                let new_name = rustc_span::RealFileName::Remapped {
                                     local_path: new_path,
                                     virtual_name,
                                 };

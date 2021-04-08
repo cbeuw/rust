@@ -133,7 +133,7 @@ impl StableSourceFileId {
     fn new_from_name(name: &FileName) -> StableSourceFileId {
         let mut hasher = StableHasher::new();
 
-        // If name was virtualized, we need to take both the local path
+        // If name was remapped, we need to take both the local path
         // and stablised path into account, in case two different paths were
         // mapped to the same
         name.hash(&mut hasher);
@@ -1003,15 +1003,15 @@ impl FilePathMapping {
             FileName::Real(realfile) => {
                 // If the file is the Name variant with only local_path, then clearly we want to map that
                 // to a virtual_name
-                // If the file is already Virtualized, then we want to map virtual_name further
+                // If the file is already remapped, then we want to map virtual_name further
                 // but we leave local_path alone
                 let path = realfile.stable_name();
                 let (mapped_path, mapped) = self.map_prefix(path.to_path_buf());
                 if mapped {
                     let mapped_realfile = match realfile {
-                        RealFileName::Named(local_path)
-                        | RealFileName::Virtualized { local_path, virtual_name: _ } => {
-                            RealFileName::Virtualized {
+                        RealFileName::LocalPath(local_path)
+                        | RealFileName::Remapped { local_path, virtual_name: _ } => {
+                            RealFileName::Remapped {
                                 local_path: local_path.clone(),
                                 virtual_name: mapped_path,
                             }

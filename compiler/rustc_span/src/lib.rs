@@ -119,11 +119,11 @@ scoped_tls::scoped_thread_local!(pub static SESSION_GLOBALS: SessionGlobals);
 #[derive(Debug, Eq, PartialEq, Clone, Ord, PartialOrd, Hash)]
 #[derive(HashStable_Generic, Decodable, Encodable)]
 pub enum RealFileName {
-    Named(PathBuf),
-    /// For virtualized paths (namely paths into libstd that have been mapped
+    LocalPath(PathBuf),
+    /// For remapped paths (namely paths into libstd that have been mapped
     /// to the appropriate spot on the local host's file system, and local file
     /// system paths that have been remapped with `FilePathMapping`),
-    Virtualized {
+    Remapped {
         /// `local_path` is the (host-dependent) local path to the file.
         local_path: PathBuf,
         /// `virtual_name` is the stable path rustc will store internally within
@@ -137,8 +137,8 @@ impl RealFileName {
     /// Avoid embedding this in build artifacts; see `stable_name()` for that.
     pub fn local_path(&self) -> &Path {
         match self {
-            RealFileName::Named(p)
-            | RealFileName::Virtualized { local_path: p, virtual_name: _ } => &p,
+            RealFileName::LocalPath(p)
+            | RealFileName::Remapped { local_path: p, virtual_name: _ } => &p,
         }
     }
 
@@ -146,19 +146,19 @@ impl RealFileName {
     /// Avoid embedding this in build artifacts; see `stable_name()` for that.
     pub fn into_local_path(self) -> PathBuf {
         match self {
-            RealFileName::Named(p)
-            | RealFileName::Virtualized { local_path: p, virtual_name: _ } => p,
+            RealFileName::LocalPath(p)
+            | RealFileName::Remapped { local_path: p, virtual_name: _ } => p,
         }
     }
 
     /// Returns the path suitable for embedding into build artifacts. Note that
-    /// a virtualized path will not correspond to a valid file system path; see
+    /// a remapped path will not correspond to a valid file system path; see
     /// `local_path()` for something that is more likely to return paths into the
     /// local host file system.
     pub fn stable_name(&self) -> &Path {
         match self {
-            RealFileName::Named(p)
-            | RealFileName::Virtualized { local_path: _, virtual_name: p } => &p,
+            RealFileName::LocalPath(p)
+            | RealFileName::Remapped { local_path: _, virtual_name: p } => &p,
         }
     }
 }
@@ -208,7 +208,7 @@ impl std::fmt::Display for FileName {
 impl From<PathBuf> for FileName {
     fn from(p: PathBuf) -> Self {
         assert!(!p.to_string_lossy().ends_with('>'));
-        FileName::Real(RealFileName::Named(p))
+        FileName::Real(RealFileName::LocalPath(p))
     }
 }
 

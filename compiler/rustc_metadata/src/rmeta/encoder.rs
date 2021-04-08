@@ -494,11 +494,11 @@ impl<'a, 'tcx> EncodeContext<'a, 'tcx> {
                         // wrong directory.
                         let mut adapted = (**source_file).clone();
                         adapted.name = match name {
-                            RealFileName::Named(local_path) => {
+                            RealFileName::LocalPath(local_path) => {
                                 Path::new(&working_dir).join(local_path).into()
                             }
-                            RealFileName::Virtualized { local_path, virtual_name } => {
-                                FileName::Real(RealFileName::Virtualized {
+                            RealFileName::Remapped { local_path, virtual_name } => {
+                                FileName::Real(RealFileName::Remapped {
                                     local_path: Path::new(&working_dir).join(local_path),
                                     virtual_name: virtual_name.clone(),
                                 })
