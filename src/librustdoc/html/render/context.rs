@@ -237,7 +237,7 @@ impl<'tcx> Context<'tcx> {
 
         // We can safely ignore synthetic `SourceFile`s.
         let file = match item.span.filename(self.sess()) {
-            FileName::Real(ref path) => path.local_path().to_path_buf(),
+            FileName::Real(ref path) => path.local_path()?.to_path_buf(),
             _ => return None,
         };
         let file = &file;
@@ -319,10 +319,17 @@ impl<'tcx> FormatRenderer<'tcx> for Context<'tcx> {
         } = options;
 
         let src_root = match krate.src {
-            FileName::Real(ref p) => match p.local_path().parent() {
-                Some(p) => p.to_path_buf(),
-                None => PathBuf::new(),
-            },
+            FileName::Real(ref p) => {
+                if let Some(local_path) = p.local_path() {
+                    match local_path.parent() {
+                        Some(p) => p.to_path_buf(),
+                        None => PathBuf::new(),
+                    }
+                } else {
+                    // Somehow we got the filename from the metadata of another crate, should never happen
+                    PathBuf::new()
+                }
+            }
             _ => PathBuf::new(),
         };
         // If user passed in `--playground-url` arg, we fill in crate name here

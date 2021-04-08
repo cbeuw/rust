@@ -155,10 +155,16 @@ impl Cache {
         // FIXME: this part is specific to HTML so it'd be nice to remove it from the common code
         for &(n, ref e) in &krate.externs {
             let src_root = match e.src {
-                FileName::Real(ref p) => match p.local_path().parent() {
-                    Some(p) => p.to_path_buf(),
-                    None => PathBuf::new(),
-                },
+                FileName::Real(ref p) => {
+                    if let Some(local_path) = p.local_path() {
+                        match local_path.parent() {
+                            Some(p) => p.to_path_buf(),
+                            None => PathBuf::new(),
+                        }
+                    } else {
+                        PathBuf::new()
+                    }
+                }
                 _ => PathBuf::new(),
             };
             let extern_url = extern_html_root_urls.get(&*e.name.as_str()).map(|u| &**u);

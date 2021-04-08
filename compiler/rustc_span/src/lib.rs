@@ -124,8 +124,9 @@ pub enum RealFileName {
     /// to the appropriate spot on the local host's file system, and local file
     /// system paths that have been remapped with `FilePathMapping`),
     Remapped {
-        /// `local_path` is the (host-dependent) local path to the file.
-        local_path: PathBuf,
+        /// `local_path` is the (host-dependent) local path to the file. This is
+        /// None if the file was imported from another crate
+        local_path: Option<PathBuf>,
         /// `virtual_name` is the stable path rustc will store internally within
         /// build artifacts.
         virtual_name: PathBuf,
@@ -133,21 +134,25 @@ pub enum RealFileName {
 }
 
 impl RealFileName {
-    /// Returns the path suitable for reading from the file system on the local host.
+    /// Returns the path suitable for reading from the file system on the local host,
+    /// if this information exists.
     /// Avoid embedding this in build artifacts; see `stable_name()` for that.
-    pub fn local_path(&self) -> &Path {
+    pub fn local_path(&self) -> Option<&Path> {
         match self {
-            RealFileName::LocalPath(p)
-            | RealFileName::Remapped { local_path: p, virtual_name: _ } => &p,
+            RealFileName::LocalPath(p) => Some(p),
+            RealFileName::Remapped { local_path: p, virtual_name: _ } => {
+                p.as_ref().map(PathBuf::as_path)
+            }
         }
     }
 
-    /// Returns the path suitable for reading from the file system on the local host.
+    /// Returns the path suitable for reading from the file system on the local host,
+    /// if this information exists.
     /// Avoid embedding this in build artifacts; see `stable_name()` for that.
-    pub fn into_local_path(self) -> PathBuf {
+    pub fn into_local_path(self) -> Option<PathBuf> {
         match self {
-            RealFileName::LocalPath(p)
-            | RealFileName::Remapped { local_path: p, virtual_name: _ } => p,
+            RealFileName::LocalPath(p) => Some(p),
+            RealFileName::Remapped { local_path: p, virtual_name: _ } => p,
         }
     }
 
