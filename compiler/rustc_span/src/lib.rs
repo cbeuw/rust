@@ -117,7 +117,7 @@ scoped_tls::scoped_thread_local!(pub static SESSION_GLOBALS: SessionGlobals);
 // FIXME: We should use this enum or something like it to get rid of the
 // use of magic `/rust/1.x/...` paths across the board.
 #[derive(Debug, Eq, PartialEq, Clone, Ord, PartialOrd, Hash)]
-#[derive(HashStable_Generic, Decodable, Encodable)]
+#[derive(HashStable_Generic, Decodable)]
 pub enum RealFileName {
     LocalPath(PathBuf),
     /// For remapped paths (namely paths into libstd that have been mapped
@@ -131,6 +131,33 @@ pub enum RealFileName {
         /// build artifacts.
         virtual_name: PathBuf,
     },
+}
+
+// This is functionally identical to #[derive(Encodable)], with the exception of
+// an added assert statement
+impl<S: Encoder> Encodable<S> for RealFileName {
+    fn encode(&self, encoder: &mut S) -> Result<(), S::Error> {
+        encoder.emit_enum("RealFileName", |encoder| match *self {
+            RealFileName::LocalPath(ref local_path) => {
+                encoder.emit_enum_variant("LocalPath", 0, 1, |encoder| {
+                    Ok({
+                        encoder.emit_enum_variant_arg(0, |encoder| local_path.encode(encoder))?;
+                    })
+                })
+            }
+
+            RealFileName::Remapped { ref local_path, ref virtual_name } => encoder
+                .emit_enum_variant("Remapped", 1, 2, |encoder| {
+                    // For privacy, we must not embed host-dependant path in artifacts
+                    // if they have been remapped by --remap-path-prefix
+                    assert!(local_path.is_none());
+                    Ok({
+                        encoder.emit_enum_variant_arg(0, |encoder| local_path.encode(encoder))?;
+                        encoder.emit_enum_variant_arg(1, |encoder| virtual_name.encode(encoder))?;
+                    })
+                }),
+        })
+    }
 }
 
 impl RealFileName {
