@@ -183,11 +183,11 @@ impl RealFileName {
         }
     }
 
-    /// Returns the path suitable for embedding into build artifacts. Note that
-    /// a remapped path will not correspond to a valid file system path; see
-    /// `local_path()` for something that is more likely to return paths into the
-    /// local host file system.
-    pub fn stable_name(&self) -> &Path {
+    /// Returns the path suitable for embedding into build artifacts. This would still
+    /// be a local path if it has not been remapped. A remapped path will not correspond
+    /// to a valid file system path: see `local_path()` for something that is more likely
+    /// to return paths into the local host file system.
+    pub fn most_stable_name(&self) -> &Path {
         match self {
             RealFileName::LocalPath(p)
             | RealFileName::Remapped { local_path: _, virtual_name: p } => &p,
@@ -223,7 +223,7 @@ impl std::fmt::Display for FileName {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use FileName::*;
         match *self {
-            Real(ref name) => write!(fmt, "{}", name.stable_name().display()),
+            Real(ref name) => write!(fmt, "{}", name.most_stable_name().display()),
             QuoteExpansion(_) => write!(fmt, "<quote expansion>"),
             MacroExpansion(_) => write!(fmt, "<macro expansion>"),
             Anon(_) => write!(fmt, "<anon>"),
