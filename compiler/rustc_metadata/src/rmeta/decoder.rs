@@ -1633,9 +1633,11 @@ impl<'a, 'tcx> CrateMetadataRef<'a> {
             if let Some(virtual_dir) = virtual_rust_source_base_dir {
                 if let Some(real_dir) = &sess.real_rust_source_base_dir {
                     if let rustc_span::FileName::Real(old_name) = name {
-                        if let rustc_span::RealFileName::LocalPath(one_path) = old_name {
-                            if let Ok(rest) = one_path.strip_prefix(virtual_dir) {
-                                let virtual_name = one_path.clone();
+                        if let rustc_span::RealFileName::Remapped { local_path: _, virtual_name } =
+                            old_name
+                        {
+                            if let Ok(rest) = virtual_name.strip_prefix(virtual_dir) {
+                                let virtual_name = virtual_name.clone();
 
                                 // The std library crates are in
                                 // `$sysroot/lib/rustlib/src/rust/library`, whereas other crates
