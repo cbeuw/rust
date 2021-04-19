@@ -261,6 +261,44 @@ impl FileName {
         }
     }
 
+    // Must only be used when self cannot possibly be Real(_)
+    pub fn to_string_virtual(&self) -> String {
+        use FileName::*;
+        match self {
+            Real(_) => panic!("{:?} is not virtual", self),
+            QuoteExpansion(_) => "<quote expansion>".into(),
+            MacroExpansion(_) => "<macro expansion>".into(),
+            Anon(_) => "<anon>".into(),
+            ProcMacroSourceCode(_) => "<proc-macro source code>".into(),
+            CfgSpec(_) => "<cfgspec>".into(),
+            CliCrateAttr(_) => "<crate attribute>".into(),
+            Custom(ref s) => format!("<{}>", s),
+            DocTest(ref path, _) => path.to_string_lossy().to_string(),
+            InlineAsm(_) => "<inline asm>".into(),
+        }
+    }
+
+    // String representation which may include transient local filesystem
+    // information. Must not be embedded in build outputs.
+    pub fn to_string_local(&self) -> String {
+        use FileName::*;
+        match self {
+            Real(ref name) => {
+                name.local_path().unwrap_or(name.most_stable_name()).to_string_lossy().to_string()
+            }
+            _ => self.to_string_virtual(),
+        }
+    }
+
+    // String representation which may be safely embedded in build outputs.
+    pub fn to_string_embeddable(&self) -> String {
+        use FileName::*;
+        match self {
+            Real(ref name) => name.most_stable_name().to_string_lossy().to_string(),
+            _ => self.to_string_virtual(),
+        }
+    }
+
     pub fn macro_expansion_source_code(src: &str) -> FileName {
         let mut hasher = StableHasher::new();
         src.hash(&mut hasher);
@@ -1316,7 +1354,7 @@ impl<D: Decoder> Decodable<D> for SourceFile {
 
 impl fmt::Debug for SourceFile {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(fmt, "SourceFile({})", self.name)
+        write!(fmt, "SourceFile({:?})", self.name)
     }
 }
 
