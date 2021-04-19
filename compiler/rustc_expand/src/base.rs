@@ -1122,7 +1122,10 @@ impl<'a> ExtCtxt<'a> {
                 other => {
                     return Err(self.struct_span_err(
                         span,
-                        &format!("cannot resolve relative path in non-file source `{}`", other),
+                        &format!(
+                            "cannot resolve relative path in non-file source `{}`",
+                            other.to_string_virtual()
+                        ),
                     ));
                 }
             };

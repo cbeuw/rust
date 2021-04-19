@@ -627,7 +627,7 @@ impl server::SourceFile for Rustc<'_> {
                 .to_str()
                 .expect("non-UTF8 file path in `proc_macro::SourceFile::path`")
                 .to_string(),
-            _ => file.name.to_string(),
+            _ => file.name.to_string_virtual(),
         }
     }
     fn is_real(&mut self, file: &Self::SourceFile) -> bool {
