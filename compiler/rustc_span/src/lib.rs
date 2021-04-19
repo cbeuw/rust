@@ -148,7 +148,7 @@ impl<S: Encoder> Encodable<S> for RealFileName {
 
             RealFileName::Remapped { ref local_path, ref virtual_name } => encoder
                 .emit_enum_variant("Remapped", 1, 2, |encoder| {
-                    // For privacy, we must not embed host-dependant path in artifacts
+                    // For privacy and build reproducibility, we must not embed host-dependant path in artifacts
                     // if they have been remapped by --remap-path-prefix
                     assert!(local_path.is_none());
                     Ok({
