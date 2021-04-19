@@ -120,7 +120,7 @@ impl<'a, 'b> CoverageCalculator<'a, 'b> {
             &self
                 .items
                 .iter()
-                .map(|(k, v)| (k.to_string(), v))
+                .map(|(k, v)| (k.to_string_local(), v))
                 .collect::<BTreeMap<String, &ItemCount>>(),
         )
         .expect("failed to convert JSON data to string")
@@ -160,7 +160,7 @@ impl<'a, 'b> CoverageCalculator<'a, 'b> {
         for (file, &count) in &self.items {
             if let Some(percentage) = count.percentage() {
                 print_table_record(
-                    &limit_filename_len(file.to_string()),
+                    &limit_filename_len(file.to_string_local()),
                     count,
                     percentage,
                     count.examples_percentage().unwrap_or(0.),

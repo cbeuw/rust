@@ -753,7 +753,7 @@ impl Collector {
         if !item_path.is_empty() {
             item_path.push(' ');
         }
-        format!("{} - {}(line {})", filename, item_path, line)
+        format!("{} - {}(line {})", filename.to_string_local(), item_path, line)
     }
 
     crate fn set_position(&mut self, position: Span) {
@@ -808,7 +808,7 @@ impl Tester for Collector {
 
         // For example `module/file.rs` would become `module_file_rs`
         let file = filename
-            .to_string()
+            .to_string_local()
             .chars()
             .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
             .collect::<String>();

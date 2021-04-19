@@ -126,7 +126,7 @@ impl AnnotateSnippetEmitterWriter {
             }
             // owned: line source, line index, annotations
             type Owned = (String, usize, Vec<crate::snippet::Annotation>);
-            let origin = primary_lo.file.name.to_string();
+            let origin = primary_lo.file.name.to_string_local();
             let annotated_files: Vec<Owned> = annotated_files
                 .into_iter()
                 .flat_map(|annotated_file| {

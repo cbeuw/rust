@@ -56,7 +56,11 @@ impl DocFolder for SourceCollector<'_, '_> {
                 Err(e) => {
                     self.scx.tcx.sess.span_err(
                         item.span.inner(),
-                        &format!("failed to render source code for `{}`: {}", filename, e),
+                        &format!(
+                            "failed to render source code for `{}`: {}",
+                            filename.to_string_local(),
+                            e
+                        ),
                     );
                     false
                 }
@@ -119,7 +123,7 @@ impl SourceCollector<'_, 'tcx> {
         href.push_str(&fname.to_string_lossy());
 
         let title = format!("{} - source", src_fname.to_string_lossy());
-        let desc = format!("Source of the Rust file `{}`.", filename);
+        let desc = format!("Source of the Rust file `{}`.", filename.to_string_local());
         let page = layout::Page {
             title: &title,
             css_class: "source",
