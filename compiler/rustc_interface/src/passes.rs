@@ -36,7 +36,7 @@ use rustc_session::output::{filename_for_input, filename_for_metadata};
 use rustc_session::search_paths::PathKind;
 use rustc_session::Session;
 use rustc_span::symbol::{Ident, Symbol};
-use rustc_span::{FileName, RealFileName};
+use rustc_span::FileName;
 use rustc_trait_selection::traits;
 use rustc_typeck as typeck;
 use tracing::{info, warn};
@@ -577,11 +577,9 @@ fn write_out_deps(
             .filter(|fmap| !fmap.is_imported())
             .map(|fmap| {
                 escape_dep_filename(&match &fmap.name {
-                    FileName::Real(real) => real
-                        .local_path()
-                        .unwrap_or(real.most_stable_name())
-                        .to_string_lossy()
-                        .to_string(),
+                    FileName::Real(real) => {
+                        real.local_path().unwrap_or(real.most_stable_name()).display().to_string()
+                    }
                     _ => fmap.name.to_string(),
                 })
             })
@@ -596,16 +594,13 @@ fn write_out_deps(
                 for cnum in resolver.cstore().crates_untracked() {
                     let source = resolver.cstore().crate_source_untracked(cnum);
                     if let Some((path, _)) = source.dylib {
-                        let file_name = FileName::Real(RealFileName::LocalPath(path));
-                        files.push(escape_dep_filename(&file_name.to_string()));
+                        files.push(escape_dep_filename(&path.display().to_string()));
                     }
                     if let Some((path, _)) = source.rlib {
-                        let file_name = FileName::Real(RealFileName::LocalPath(path));
-                        files.push(escape_dep_filename(&file_name.to_string()));
+                        files.push(escape_dep_filename(&path.display().to_string()));
                     }
                     if let Some((path, _)) = source.rmeta {
-                        let file_name = FileName::Real(RealFileName::LocalPath(path));
-                        files.push(escape_dep_filename(&file_name.to_string()));
+                        files.push(escape_dep_filename(&path.display().to_string()));
                     }
                 }
             });
