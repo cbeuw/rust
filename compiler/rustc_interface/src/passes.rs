@@ -532,10 +532,10 @@ fn output_conflicts_with_dir(output_paths: &[PathBuf]) -> Option<PathBuf> {
     check_output(output_paths, check)
 }
 
-fn escape_dep_filename(filename: &FileName) -> String {
+fn escape_dep_filename(filename: &String) -> String {
     // Apparently clang and gcc *only* escape spaces:
     // http://llvm.org/klaus/clang/commit/9d50634cfc268ecc9a7250226dd5ca0e945240d4
-    filename.to_string().replace(" ", "\\ ")
+    filename.replace(" ", "\\ ")
 }
 
 // Makefile comments only need escaping newlines and `\`.
@@ -575,7 +575,16 @@ fn write_out_deps(
             .iter()
             .filter(|fmap| fmap.is_real_file())
             .filter(|fmap| !fmap.is_imported())
-            .map(|fmap| escape_dep_filename(&fmap.name))
+            .map(|fmap| {
+                escape_dep_filename(&match &fmap.name {
+                    FileName::Real(real) => real
+                        .local_path()
+                        .unwrap_or(real.most_stable_name())
+                        .to_string_lossy()
+                        .to_string(),
+                    _ => fmap.name.to_string(),
+                })
+            })
             .collect();
 
         if let Some(ref backend) = sess.opts.debugging_opts.codegen_backend {
@@ -588,15 +597,15 @@ fn write_out_deps(
                     let source = resolver.cstore().crate_source_untracked(cnum);
                     if let Some((path, _)) = source.dylib {
                         let file_name = FileName::Real(RealFileName::LocalPath(path));
-                        files.push(escape_dep_filename(&file_name));
+                        files.push(escape_dep_filename(&file_name.to_string()));
                     }
                     if let Some((path, _)) = source.rlib {
                         let file_name = FileName::Real(RealFileName::LocalPath(path));
-                        files.push(escape_dep_filename(&file_name));
+                        files.push(escape_dep_filename(&file_name.to_string()));
                     }
                     if let Some((path, _)) = source.rmeta {
                         let file_name = FileName::Real(RealFileName::LocalPath(path));
-                        files.push(escape_dep_filename(&file_name));
+                        files.push(escape_dep_filename(&file_name.to_string()));
                     }
                 }
             });
