@@ -374,11 +374,6 @@ impl SourceMap {
         source_file
     }
 
-    pub fn mk_substr_filename(&self, sp: Span) -> String {
-        let pos = self.lookup_char_pos(sp.lo());
-        format!("<{}:{}:{}>", pos.file.name, pos.line, pos.col.to_usize() + 1)
-    }
-
     // If there is a doctest offset, applies it to the line.
     pub fn doctest_offset_line(&self, file: &FileName, orig: usize) -> usize {
         match file {
