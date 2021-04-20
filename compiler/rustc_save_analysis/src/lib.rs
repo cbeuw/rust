@@ -80,7 +80,7 @@ impl<'tcx> SaveContext<'tcx> {
         let end = sm.lookup_char_pos(span.hi());
 
         SpanData {
-            file_name: start.file.name.to_string().into(),
+            file_name: start.file.name.to_string_embeddable().into(),
             byte_start: span.lo().0,
             byte_end: span.hi().0,
             line_start: Row::new_one_indexed(start.line as u32),
@@ -290,7 +290,7 @@ impl<'tcx> SaveContext<'tcx> {
                     name: item.ident.to_string(),
                     qualname,
                     span: self.span_from_span(item.ident.span),
-                    value: filename.to_string(),
+                    value: filename.to_string_embeddable(),
                     parent: None,
                     children: m
                         .item_ids

@@ -425,7 +425,7 @@ impl SourceMap {
         let hi = self.lookup_char_pos(sp.hi());
         format!(
             "{}:{}:{}: {}:{}",
-            lo.file.name,
+            lo.file.name.to_string_embeddable(),
             lo.line,
             lo.col.to_usize() + 1,
             hi.line,

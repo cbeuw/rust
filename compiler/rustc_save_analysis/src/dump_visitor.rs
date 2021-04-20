@@ -1117,7 +1117,7 @@ impl<'tcx> DumpVisitor<'tcx> {
                 name: String::new(),
                 qualname,
                 span,
-                value: filename.to_string(),
+                value: filename.to_string_embeddable(),
                 children,
                 parent: None,
                 decl_id: None,
