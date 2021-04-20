@@ -215,7 +215,7 @@ impl<'a, 'b> fold::DocFolder for CoverageCalculator<'a, 'b> {
                 let filename = i.span.filename(self.ctx.sess());
                 if let Some(ref tr) = impl_.trait_ {
                     debug!(
-                        "impl {:#} for {:#} in {}",
+                        "impl {:#} for {:#} in {:?}",
                         tr.print(&self.ctx.cache, self.ctx.tcx),
                         impl_.for_.print(&self.ctx.cache, self.ctx.tcx),
                         filename,
@@ -229,7 +229,7 @@ impl<'a, 'b> fold::DocFolder for CoverageCalculator<'a, 'b> {
                     // cases it doesn't make sense, as all methods on a type are in one single
                     // impl block
                     debug!(
-                        "impl {:#} in {}",
+                        "impl {:#} in {:?}",
                         impl_.for_.print(&self.ctx.cache, self.ctx.tcx),
                         filename
                     );
@@ -255,7 +255,7 @@ impl<'a, 'b> fold::DocFolder for CoverageCalculator<'a, 'b> {
                 // unless the user had an explicit `allow`
                 let should_have_docs =
                     level != lint::Level::Allow || matches!(source, LintLevelSource::Default);
-                debug!("counting {:?} {:?} in {}", i.type_(), i.name, filename);
+                debug!("counting {:?} {:?} in {:?}", i.type_(), i.name, filename);
                 self.items.entry(filename).or_default().count_item(
                     has_docs,
                     has_doc_example,
